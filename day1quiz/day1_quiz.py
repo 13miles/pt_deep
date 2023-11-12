@@ -1,34 +1,39 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
 
-x_train = torch.FloatTensor([[73, 80, 75, 65],
-                             [93, 88, 93, 88],
-                             [89, 91, 90, 76],
-                             [96, 98, 100, 99],
-                             [73, 65, 70, 100],
-                             [84, 98, 90, 100]])
+x_train = torch.FloatTensor( [[73,80,75,65],
+                              [93,88,93,88],
+                              [89,91,90,76],
+                              [96,98,100,99],
+                              [73,65,70,100],
+                              [84, 98, 90, 100]])
+
 y_train = torch.FloatTensor([[152],[185],[180],[196],[142],[188]])
 
-from torch.utils.data import TensorDataset
-from torch.utils.data import DataLoader
-
 dataset = TensorDataset(x_train, y_train)
-dataloader = DataLoader(dataset, batch_size=3, shuffle=False)
+dataloader = DataLoader(dataset, batch_size=3, shuffle=True)
 
-for data in dataloader:
-    print(data, end='\n\n')
+class MLRegressionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(4,1)
 
-model = nn.Linear(4,1)
+    def forward(self, x):
+        return self.linear(x)
+
+model = MLRegressionModel()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
 
-import torch.nn.functional as F
+for epoch in range(2000):
+    for batch_idx, samples in enumerate(dataloader):
+        x_train, y_train = samples
+        hypothesis = model(x_train)
+        cost = F.mse_loss(hypothesis, y_train)
 
-for epoch in range(20):
-    for batch_idx, data in enumerate(dataloader):
-        batch_x, batch_y = data
-        hypothesis = model(batch_x)
-        cost = F.mse_loss(hypothesis, batch_y)
         optimizer.zero_grad()
         cost.backward()
         optimizer.step()
-        print(f'{epoch+1}/{batch_idx+1} cost {cost.item():.4f}')
+        if epoch % 100 == 0:
+            print('epoch:{} cost:{:.4f}'.format(epoch, cost.item()))
